@@ -1,9 +1,22 @@
+{-# language FlexibleContexts #-}
+
 -- | An implementation of Ziria that uses Feldspar to represent computations.
 module Zeldspar
   ( module Feld
   , module Z
+  -- todo: software.
   , ZS
+  , Software
+  , SExp
+  , SType
+  , SType'
+  -- todo: hardware.
   , ZH
+  , Hardware
+  , HExp
+  , HType
+  , HType'
+  -- primitives.
   , lift
   , runZ
   , precompute
@@ -19,8 +32,8 @@ import Prelude hiding (take)
 import Feldspar as Feld hiding (loop)
 import Feldspar.Storable
 import Feldspar.Array.Vector as Feld hiding (take)
-import Feldspar.Software (Software)
-import Feldspar.Hardware (Hardware)
+import Feldspar.Software (Software, SExp, SType, SType')
+import Feldspar.Hardware (Hardware, HExp, HType, HType')
 
 --------------------------------------------------------------------------------
 -- * Representation and translation.
@@ -34,7 +47,12 @@ type ZH inp out = Z inp out Hardware
 
 -- | Translate a 'Z' stream into a computation program.
 runZ
-  :: forall inp out m a . MonadComp m
+  :: forall inp out m a .
+     ( MonadComp m
+     , Value (Expr m)
+     , SyntaxM m (Expr m Bool)
+     , Internal (Expr m Bool) ~ Bool
+     )
   => Z inp out m a  -- ^ Ziria stream.
   -> (m inp)        -- ^ Source.
   -> (out -> m ())  -- ^ Sink.
@@ -54,7 +72,13 @@ runZ (Z p) src snk = trans (p Return)
               writeStore st s'
          return (error "unreachable")
 
-    true = undefined
+    true
+      :: ( Value (Expr m)
+         , SyntaxM m (Expr m Bool)
+         , Internal (Expr m Bool) ~ Bool
+         )
+      => Expr m Bool
+    true = value True
 
 --------------------------------------------------------------------------------
 -- ** Utilities

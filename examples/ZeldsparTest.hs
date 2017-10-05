@@ -1,31 +1,37 @@
 module ZeldsparTest where
 
-import qualified Prelude
-
 import Zeldspar
-import Zeldspar.Parallel
 
+import Prelude hiding (take)
 
-prog1 :: Zun (Data Int32) (Data Int32) ()
+-- co-feldspar.
+import Feldspar.Software as Soft hiding (loop)
+import Feldspar.Hardware as Hard hiding (loop)
+
+--------------------------------------------------------------------------------
+-- *
+--------------------------------------------------------------------------------
+
+prog1 :: ZS (SExp Int32) (SExp Int32) ()
 prog1 = loop $ do
     i <- take
     lift $ printf "prog1 received %d\n" i
     emit (i + 1)
 
-prog2 :: Zun (Data Int32) (Data Int32) ()
+prog2 :: ZS (SExp Int32) (SExp Int32) ()
 prog2 = loop $ do
     i <- take
     lift $ printf "prog2 received %d\n" i
     emit (i * 2)
 
-fused :: Zun (Data Int32) (Data Int32) ()
+fused :: ZS (SExp Int32) (SExp Int32) ()
 fused = prog1 >>> prog2
 
-stored :: Zun (Data Int32) (Data Int32) ()
+stored :: ZS (SExp Int32) (SExp Int32) ()
 stored = prog1 >>> loop store >>> prog2
 
----
-
+--------------------------------------------------------------------------------
+{-
 prog3 :: Zun (Data Int32) (Data Int32) ()
 prog3 = loop $ do
     i <- take
@@ -84,26 +90,16 @@ storedVec = vecMake >>> vecInc >>> loop store >>> vecRev >>> vecTail >>> vecSum
 parVec = (vecMake >>> vecInc) |>>10`ofLength`30>>| (vecRev >>> (vecTail >>> vecSum))
 
 parVec' n = vecMake |>>4`ofLength`n>>| vecTail |>>3`ofLength`n>>| vecSum |>>2>>| prog1
+-}
 
----
+--------------------------------------------------------------------------------
+-- *
+--------------------------------------------------------------------------------
 
-prepare :: Zun (Data Int32) (Data Int32) () -> Run ()
+prepare :: ZS (SExp Int32) (SExp Int32) () -> Software ()
 prepare p = runZ p src snk
   where
     src = fget stdin
     snk = printf "%d\n"
 
----
-
-preparePar :: ParZun (Data Int32) (Data Int32) () -> Run ()
-preparePar p = runParZ p src 10 snk 10
-  where
-    src = (\x -> (x, true)) <$> fget stdin
-    snk = \x -> printf "%d\n" x >> return true
-
-runPar p = runCompiled' def opts (preparePar p)
-  where
-    opts = def
-         { externalFlagsPost = ["-lpthread"]
-         , externalFlagsPre  = [ "-I../imperative-edsl/include"
-                               , "../imperative-edsl/csrc/chan.c" ] }
+--------------------------------------------------------------------------------
