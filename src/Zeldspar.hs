@@ -1,35 +1,44 @@
--- | An implementation of Ziria that uses Feldspar to represent computations
+-- | An implementation of Ziria that uses Feldspar to represent computations.
 module Zeldspar
-  ( module F
+  ( module Feld
   , module Z
-  , Zun
+  , ZS
+  , ZH
   , lift
   , runZ
   , precompute
   , store
   ) where
 
+import Ziria as Z
+
 import Control.Monad.Trans (lift)
 import Prelude hiding (take)
 
-import Feldspar as F hiding (foldM)
-import Feldspar.Data.Storable
-import Feldspar.Data.Vector as F hiding (take)
-import Feldspar.Run as F hiding (foldM)
-import Ziria as Z
-
+-- co-feldspar.
+import Feldspar as Feld hiding (loop)
+import Feldspar.Storable
+import Feldspar.Array.Vector as Feld hiding (take)
+import Feldspar.Software (Software)
+import Feldspar.Hardware (Hardware)
 
 --------------------------------------------------------------------------------
--- * Representation and translation
+-- * Representation and translation.
 --------------------------------------------------------------------------------
 
-type Zun inp out = Z inp out Run
+-- | Software based 'Z' streams.
+type ZS inp out = Z inp out Software
 
-runZ :: forall inp out m a. MonadComp m
-          => Z inp out m a
-          -> (m inp)        -- ^ Source
-          -> (out -> m ())  -- ^ Sink
-          -> m a
+-- | Hardware based 'Z' streams.
+type ZH inp out = Z inp out Hardware
+
+-- | Translate a 'Z' stream into a computation program.
+runZ
+  :: forall inp out m a . MonadComp m
+  => Z inp out m a  -- ^ Ziria stream.
+  -> (m inp)        -- ^ Source.
+  -> (out -> m ())  -- ^ Sink.
+  -> m a
 runZ (Z p) src snk = trans (p Return)
   where
     trans :: forall a. Action inp out m a -> m a
@@ -37,25 +46,29 @@ runZ (Z p) src snk = trans (p Return)
     trans (Emit x p)  = snk x >> trans p
     trans (Take p)    = src >>= trans . p
     trans (Return x)  = return x
-    trans (Loop s0 p) = do st <- initStore s0
-                           while (return true) $
-                             do s <- readStore st
-                                s' <- trans (p s)
-                                writeStore st s'
-                           return (error "unreachable")
+    trans (Loop s0 p) =
+      do st <- initStore s0
+         Feld.while (return true) $
+           do s  <- readStore st
+              s' <- trans (p s)
+              writeStore st s'
+         return (error "unreachable")
 
+    true = undefined
 
 --------------------------------------------------------------------------------
--- * Utilities
+-- ** Utilities
 --------------------------------------------------------------------------------
 
-precompute :: (MonadComp m, Storable a) => a -> m a
+precompute :: (MonadComp m, Storable m a) => a -> m a
 precompute x = do
   s <- initStore x
   unsafeFreezeStore s
 
-store :: MonadComp m => Storable a => Z a a m ()
+store :: (MonadComp m, Storable m a) => Z a a m ()
 store = do
   i <- take
   o <- lift $ precompute i
   emit o
+
+--------------------------------------------------------------------------------

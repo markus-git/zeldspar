@@ -4,9 +4,15 @@ synopsis:            Ziria + Feldspar
 description:         see README.md
 license:             BSD3
 license-file:        LICENSE
-author:              Emil Axelsson, Koen Claessen, Anton Ekblad, Máté Karácsony
-maintainer:          k_mate@inf.elte.hu
-copyright:           Copyright (c) 2015-2016, Emil Axelsson, Koen Claessen, Anton Ekblad, Máté Karácsony
+author:              Markus Aronsson, Emil Axelsson, Koen Claessen, Anton Ekblad, Máté Karácsony
+maintainer:          mararon@chalmers.se
+copyright:           Copyright (c) 2017,
+                       Markus Aronsson, Emil Axelsson,
+                       Koen Claessen, Anton Ekblad,
+                       Máté Karácsony
+                     Copyright (c) 2015-2016,
+                       Emil Axelsson, Koen Claessen,
+                       Anton Ekblad, Máté Karácsony
 category:            Language
 build-type:          Simple
 cabal-version:       >=1.10
@@ -18,13 +24,11 @@ extra-source-files:
 
 source-repository head
   type:     git
-  location: https://github.com/kmate/zeldspar
+  location: https://github.com/markus-git/zeldspar
 
 library
   exposed-modules:
-    Zeldspar.Parallel
     Zeldspar
-    Ziria.Parallel
     Ziria
 
   hs-source-dirs: src
@@ -39,7 +43,7 @@ library
   build-depends:
     base < 5,
     mtl,
-    raw-feldspar,
+    co-feldspar,
     transformers
 
 test-suite Examples
